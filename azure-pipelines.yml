@@ -1,4 +1,3 @@
-# azure-pipelines.yml
 trigger:
   branches:
     include:
@@ -6,14 +5,12 @@ trigger:
       - dev
 
 variables:
-  # Configurações do Azure Container Registry
   dockerRegistryServiceConnection: 'registropagpasse'
   containerRegistry: 'registropagpasse.azurecr.io'
   imageRepository: 'java-application'
   dockerfilePath: '$(Build.SourcesDirectory)/Dockerfile'
   vmImageName: 'ubuntu-latest'
   
-  # Definir tag baseada na branch
   ${{ if eq(variables['Build.SourceBranchName'], 'main') }}:
     imageTag: 'latest'
   ${{ if eq(variables['Build.SourceBranchName'], 'dev') }}:
