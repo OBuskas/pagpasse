@@ -2,53 +2,46 @@ trigger:
   branches:
     include:
       - main
-      - dev
+      - staging
+
+pool:
+  vmImage: 'ubuntu-latest'
 
 variables:
-  dockerRegistryServiceConnection: 'registropagpasse'
-  containerRegistry: 'registropagpasse.azurecr.io'
-  imageRepository: 'java-application'
-  dockerfilePath: '$(Build.SourcesDirectory)/Dockerfile'
-  vmImageName: 'ubuntu-latest'
-  
-  ${{ if eq(variables['Build.SourceBranchName'], 'main') }}:
-    imageTag: 'latest'
-  ${{ if eq(variables['Build.SourceBranchName'], 'dev') }}:
-    imageTag: 'dev'
+  dockerRegistryServiceConnection: 'registropagpasse'     # Replace with your actual connection
+  imageRepository: 'image-pagpasse'                        # Replace with your ACR image name
+  containerRegistry: 'registropagpasse.azurecr.io'            # Replace with your ACR login server
+  dockerfilePath: 'Dockerfile'
 
-stages:
-- stage: Build
-  displayName: 'Build e Push da imagem Docker'
-  jobs:
-  - job: BuildAndPush
-    displayName: 'Build do Java e Push para ACR'
-    pool:
-      vmImage: $(vmImageName)
-    steps:
-    - task: Maven@3
-      displayName: 'Build com Maven'
-      inputs:
-        mavenPomFile: 'pom.xml'
-        goals: 'clean package'
-        publishJUnitResults: true
-        testResultsFiles: '**/surefire-reports/TEST-*.xml'
-        javaHomeOption: 'JDKVersion'
-        jdkVersionOption: '11'
-        mavenVersionOption: 'Default'
-    
-    - task: Docker@2
-      displayName: 'Login no ACR'
-      inputs:
-        command: login
-        containerRegistry: $(dockerRegistryServiceConnection)
-    
-    - task: Docker@2
-      displayName: 'Build e Push da imagem Docker'
-      inputs:
-        command: buildAndPush
-        repository: $(imageRepository)
-        dockerfile: $(dockerfilePath)
-        containerRegistry: $(dockerRegistryServiceConnection)
-        tags: |
-          $(Build.BuildId)
-          $(imageTag)
+steps:
+
+# Checkout code
+- checkout: self
+
+# Build the .JAR with Maven
+- task: Maven@3
+  displayName: 'Build Java App'
+  inputs:
+    mavenPomFile: 'pom.xml'
+    goals: 'package'
+    options: '-Dmaven.test.skip=true'
+
+# Tag based on branch
+- ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/main') }}:
+  - script: echo "##vso[task.setvariable variable=imageTag]latest"
+    displayName: 'Set image tag to latest (production)'
+
+- ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/staging') }}:
+  - script: echo "##vso[task.setvariable variable=imageTag]dev"
+    displayName: 'Set image tag to dev (staging)'
+
+# Build and Push Docker image to ACR
+- task: Docker@2
+  displayName: 'Build and Push Docker Image'
+  inputs:
+    containerRegistry: $(dockerRegistryServiceConnection)
+    repository: $(imageRepository)
+    command: 'buildAndPush'
+    Dockerfile: $(dockerfilePath)
+    tags: |
+      $(imageTag)
