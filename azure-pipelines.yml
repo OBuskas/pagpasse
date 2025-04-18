@@ -1,0 +1,57 @@
+# azure-pipelines.yml
+trigger:
+  branches:
+    include:
+      - main
+      - dev
+
+variables:
+  # Configurações do Azure Container Registry
+  dockerRegistryServiceConnection: 'registropagpasse'
+  containerRegistry: 'registropagpasse.azurecr.io'
+  imageRepository: 'java-application'
+  dockerfilePath: '$(Build.SourcesDirectory)/Dockerfile'
+  vmImageName: 'ubuntu-latest'
+  
+  # Definir tag baseada na branch
+  ${{ if eq(variables['Build.SourceBranchName'], 'main') }}:
+    imageTag: 'latest'
+  ${{ if eq(variables['Build.SourceBranchName'], 'dev') }}:
+    imageTag: 'dev'
+
+stages:
+- stage: Build
+  displayName: 'Build e Push da imagem Docker'
+  jobs:
+  - job: BuildAndPush
+    displayName: 'Build do Java e Push para ACR'
+    pool:
+      vmImage: $(vmImageName)
+    steps:
+    - task: Maven@3
+      displayName: 'Build com Maven'
+      inputs:
+        mavenPomFile: 'pom.xml'
+        goals: 'clean package'
+        publishJUnitResults: true
+        testResultsFiles: '**/surefire-reports/TEST-*.xml'
+        javaHomeOption: 'JDKVersion'
+        jdkVersionOption: '11'
+        mavenVersionOption: 'Default'
+    
+    - task: Docker@2
+      displayName: 'Login no ACR'
+      inputs:
+        command: login
+        containerRegistry: $(dockerRegistryServiceConnection)
+    
+    - task: Docker@2
+      displayName: 'Build e Push da imagem Docker'
+      inputs:
+        command: buildAndPush
+        repository: $(imageRepository)
+        dockerfile: $(dockerfilePath)
+        containerRegistry: $(dockerRegistryServiceConnection)
+        tags: |
+          $(Build.BuildId)
+          $(imageTag)
