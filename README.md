@@ -195,8 +195,8 @@ O projeto utiliza Maven como ferramenta de build, com configurações definidas 
 
 Para questões, sugestões ou problemas, abra uma Issue no GitHub ou entre em contato através de:
 
-- Email: [seu-email@exemplo.com]
-- Website: [seu-website.com]
+- Email: [lucas.barbosa12397@gmail.com]
+- Website: [https://bento.me/lucasbarbosa]
 
 ## 📈 Roadmap de Desenvolvimento
 
